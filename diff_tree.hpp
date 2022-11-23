@@ -27,6 +27,22 @@ enum OPERATORS
 
 typedef const char* Elem_t;
 
+
+struct Constant
+{
+    char  var_name   = ' ';
+    double var_value = 0;
+};
+
+
+struct Constants
+{
+    size_t capacity = 0;
+    Constant *list = NULL;
+};
+
+
+
 struct Tree_node
 {
     enum NODE_TYPE type;

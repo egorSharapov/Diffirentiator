@@ -7,6 +7,7 @@
 #include <malloc.h>
 #include "file_analize.hpp"
 #include "utilities.hpp"
+#include "diffirentiator.hpp"
 
 const char *keywords[keywords_number] = {"Очевидно, что:", "Заметим, что:", "Нетрудно заметить:", "Не требует дальнейших комментариев:"};
 
@@ -111,7 +112,7 @@ void save_tree (const char* file_name, Root* tree_root)
     if (!output_file)
         printf ("open file error");
 
-    save_node (output_file, tree_root->first_node, NULL);
+    save_node (output_file, tree_root->first_node, NULL, NULL);
     fprintf (output_file, "\n");
 
     if (fclose (output_file) != 0)
@@ -120,7 +121,7 @@ void save_tree (const char* file_name, Root* tree_root)
 
 //--------------------------------------------------------------------------------------------------------------------
 
-void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
+void save_node (FILE* output_file, Tree_node* node, Tree_node *parent, Constants *f_constants)
 {
     if (node)
     {
@@ -131,7 +132,7 @@ void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
             fprintf (output_file, "(");
 
         if (!is_unary (node->op_value))
-            save_node (output_file, node->left, node);
+            save_node (output_file, node->left, node, f_constants);
 
     
         if (node->op_value != OP_NON)
@@ -144,11 +145,14 @@ void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
                 fprintf (output_file, "%lg", node->num_value);
         
         else if (node->var_value)
-            fprintf (output_file, "%s", node->var_value); 
+            if (*node->var_value == 'x')
+                fprintf (output_file, "%s", node->var_value); 
+            else 
+                fprintf (output_file, "%lg", Find_const_by_name (*node->var_value, f_constants));
         
 
 
-        save_node (output_file, node->right, node);
+        save_node (output_file, node->right, node, f_constants);
 
         if (parent and is_unary (parent->op_value))
             fprintf (output_file, ")");
@@ -162,13 +166,12 @@ void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
 
 //--------------------------------------------------------------------------------------------------------------------
 
-void read_t_file (Text *text, const char *t_file_name, Root *tree_root)
+void read_t_file (Text *text, const char *t_file_name, Root *tree_root, Constants *constants)
 {
     assert (text);
     assert (t_file_name);
     assert (tree_root);
 
-    Constants constants = {};
 
     count_and_read (t_file_name, text);
     create_pointers (text);
@@ -182,24 +185,22 @@ void read_t_file (Text *text, const char *t_file_name, Root *tree_root)
         printf ("syntax error");
     
     char var = ' ';
-    size_t constants_str = 9;
+    size_t constants_str = 8;
     double var_value = 0;
 
-    constants.constants_list = (Constant *) calloc (text->count_of_strings - constants_str, sizeof (Constant));
-    constants.capacity = text->count_of_strings - constants_str;
+    constants->list = (Constant *) Safety_calloc ((text->count_of_strings - constants_str) * sizeof (Constant));
+    constants->capacity = text->count_of_strings - constants_str;
 
-    // while (text->count_of_strings != constants_str)
-    // {
-    //     if (sscanf (text->meta_string[constants_str].string_point, "%c = %lg", &var, &var_value) != 2)
-    //         printf ("incorrect input\n");
+    while (text->count_of_strings != constants_str)
+    {
+        if (sscanf (text->meta_string[constants_str].string_point, "%c = %lg", &var, &var_value) != 2)
+            printf ("incorrect input\n");
 
-    //     constants.constants_list[text->count_of_strings - constants_str].var_name = var;
-    //     constants.constants_list[text->count_of_strings - constants_str].var_value = var_value;
+        constants->list[text->count_of_strings - constants_str - 1].var_name = var;
+        constants->list[text->count_of_strings - constants_str - 1].var_value = var_value;
 
-    //     constants_str++;
-    // }
-    
-
+        constants_str++;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -283,9 +284,7 @@ static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node 
 
     if (node)
     {
-        if (parent and is_unary (parent->op_value))
-            fprintf (output_file, "(");
-            
+
         if (parent and parent->op_value == OP_PWR)
             fprintf (output_file, "{");
 
@@ -294,7 +293,9 @@ static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node 
                         
         if (parent and node->op_value and node->op_value < parent->op_value)
             fprintf (output_file, "(");
-
+        else if (parent and is_unary (parent->op_value))
+            fprintf (output_file, "(");
+            
 
         if (!is_unary (node->op_value))
             Tex_node (output_file, node->left, node);
@@ -315,13 +316,13 @@ static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node 
 
         if (parent and is_unary (parent->op_value))
             fprintf (output_file, ")");
+        
+        else if (parent and node->op_value and node->op_value < parent->op_value)
+            fprintf (output_file, ")");
 
         if (node->op_value == OP_DIV)
             fprintf (output_file, "}");
                   
-        if (parent and node->op_value and node->op_value < parent->op_value)
-            fprintf (output_file, ")");
-
         if (parent and parent->op_value == OP_PWR)
             fprintf (output_file, "}");
     }
@@ -422,11 +423,11 @@ void Tex_subtree (FILE *tex_file, OPERATORS op_value, const Tree_node *node)
     }
     case OP_LN:
     {
-        fprintf (tex_file, "{");
+        fprintf (tex_file, "{{");
         Print_tex (tex_file, 1, node->right);
-        fprintf (tex_file, " \\over");
-        Print_tex (tex_file, 0, node->left);
-        fprintf (tex_file, "}");
+        fprintf (tex_file, " } \\over {");
+        Print_tex (tex_file, 0, node->right);
+        fprintf (tex_file, "}}");
         break;
     }
     case OP_NON:
@@ -452,10 +453,10 @@ void Print_tex_keywords (FILE *tex_file)
 }
 
 
-void Print_tex_title (FILE *tex_file)
+void Print_tex_title (FILE *tex_file, Root *tree_root, Constants *f_constants)
 {
     assert (tex_file);
-    
+
     fprintf (tex_file,  "\\documentclass{article}\n"
                         "\\usepackage[utf8]{inputenc}\n"
                         "\\usepackage[T2A]{fontenc}\n"
@@ -482,5 +483,30 @@ void Print_tex_title (FILE *tex_file)
                         "\\begin{abstract}"
                         "Данный документ содержит полный анализ функции с разложением в ряд Тейлора и построением графика"
                         "\\end{abstract}");
+    
+    fprintf (tex_file, "\n\\section{Исходная функция.}\n\n");
+
+    fprintf (tex_file, "f(x");
+    for (size_t index = 0; index < f_constants->capacity; index++)
+    {
+        fprintf (tex_file, ", %c", f_constants->list[index].var_name);
+    }
+    fprintf (tex_file, ") = $");
+
+    Print_tex (tex_file, 0, tree_root->first_node);
+    fprintf (tex_file, "$\n");
+
+}
+
+
+
+void Print_tex_end (FILE *tex_file)
+{
+    fprintf (tex_file, "\\end{document}");
+    fclose (tex_file);
+
+    system ("pdflatex --output-directory=out out/tex_input.tex");
+
+    printf ("latex compile succes");
 
 }
