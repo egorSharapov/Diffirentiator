@@ -56,6 +56,6 @@ Tree_node *Find_node_by_value (Tree_node *parent, Elem_t value);
 
 void show_tree (Root *tree_root);
 void Print_node (const Tree_node *node);
-void free_node (Tree_node* node);
+void Free_tree (Tree_node *node);
 void Graph_print_tree (Root *tree_root);
 #endif

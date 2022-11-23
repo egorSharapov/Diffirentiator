@@ -39,7 +39,7 @@ void counting_strings (Text * text)
         if (*(point - 1) == 13)
             *(point - 1) = ' ';
         
-        *point = ' ';
+        *point = '\0';
         point++;
         text->count_of_strings++;
     }
@@ -61,7 +61,7 @@ ERRORS_CODE count_and_read (const char *file_name, Text * text)
 
     size_t file_size = file_size_count (file_name);
     
-    text->source = (char *) calloc ((file_size + 2), sizeof (char));
+    text->source = (char *) Safety_calloc (file_size + 2);
 
     if (text->source == NULL)
         return NO_MEM_ERROR;
@@ -88,7 +88,7 @@ void create_pointers (Text * text)
 {
     assert (text);
 
-    text->meta_string = (String *) calloc (text->count_of_strings + 1, sizeof (String));
+    text->meta_string = (String *) Safety_calloc ((text->count_of_strings + 1) * sizeof (String));
     size_t index_of_string = 0;
     char * point = text->source;
 
@@ -162,12 +162,13 @@ void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
 
 //--------------------------------------------------------------------------------------------------------------------
 
-void read_t_file (const char *t_file_name, Root *tree_root)
+void read_t_file (Text *text, const char *t_file_name, Root *tree_root)
 {
-    Text text = {};
 
-    count_and_read (t_file_name, &text);
-    const char *temp_source = text.source;
+    count_and_read (t_file_name, text);
+    create_pointers (text);
+
+    const char *temp_source = text->source;
     
     if (strchr (temp_source, '('))
         tree_root->first_node = read_node (&temp_source);
@@ -184,7 +185,7 @@ Tree_node *read_leather (const char** source)
     assert (source);
 
     double number = 0;
-    char *symbol  = (char *) calloc (sizeof (char), max_cmd_size);
+    char *symbol  = (char *) Safety_calloc (max_cmd_size);
 
     if (sscanf (*source, " (%lf)", &number))
     {
@@ -243,10 +244,7 @@ char * create_dir_name (const char *file_path, const char *file_name)
     assert (file_path);
     assert (file_name);
 
-    char *file_dir = (char *) calloc (strlen (file_path) + strlen (file_name) + 1, sizeof (char));
-
-    if (file_dir == NULL)
-        printf ("calloc error");
+    char *file_dir = (char *) Safety_calloc (strlen (file_path) + strlen (file_name) + 1);
 
     strcpy (file_dir, file_path);
     strcat (file_dir, file_name);
@@ -304,7 +302,7 @@ static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node 
     }
 }
 
-void Print_tex (FILE *tex_file, bool is_diff, const Tree_node *node)
+void Print_tex (FILE *tex_file, bool is_diff, const Tree_node *node, int diff_power)
 {
     assert (tex_file);
 
@@ -313,8 +311,10 @@ void Print_tex (FILE *tex_file, bool is_diff, const Tree_node *node)
 
     Tex_node (tex_file, node, NULL);
 
-    if (is_diff)
+    if (is_diff and diff_power == 1)
         fprintf (tex_file, ")}^{\'}");
+    else if (is_diff)
+        fprintf (tex_file, ")}^{%d}", diff_power);
 
 }
 
@@ -389,6 +389,15 @@ void Tex_subtree (FILE *tex_file, OPERATORS op_value, const Tree_node *node)
         Print_tex (tex_file, 0, node->right);
         fprintf (tex_file, " - 1} \\cdot");
         Print_tex (tex_file, 1, node->left);
+        break;
+    }
+    case OP_LN:
+    {
+        fprintf (tex_file, "{");
+        Print_tex (tex_file, 1, node->right);
+        fprintf (tex_file, " \\over");
+        Print_tex (tex_file, 0, node->left);
+        fprintf (tex_file, "}");
         break;
     }
     case OP_NON:

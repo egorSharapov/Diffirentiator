@@ -2,13 +2,14 @@
 #include <assert.h>
 #include <math.h>
 #include <malloc.h>
+#include "utilities.hpp"
 #include "diff_tree.hpp"
 
 
 
 Tree_node *New_num (double number)
 {
-    Tree_node *new_node = (Tree_node *) calloc (sizeof (Tree_node), 1);
+    Tree_node *new_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
     new_node->type = NUMBER;
     new_node->num_value = number;
@@ -23,7 +24,7 @@ Tree_node *New_num (double number)
 
 Tree_node *New_var (const char* variable)
 {
-    Tree_node *new_node = (Tree_node *) calloc (sizeof (Tree_node), 1);
+    Tree_node *new_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
     new_node->type = VARIABLE;
     new_node->num_value = NAN;
@@ -60,7 +61,7 @@ static OPERATORS Find_operator (const char *op_value)
 
 Tree_node *New_operator (const char* op_value, Tree_node *left_son, Tree_node *right_son)
 {
-    Tree_node *new_node = (Tree_node *) calloc (sizeof (Tree_node), 1);
+    Tree_node *new_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
     new_node->type = OPERATOR;
     new_node->num_value = NAN;
@@ -74,7 +75,7 @@ Tree_node *New_operator (const char* op_value, Tree_node *left_son, Tree_node *r
 }
 
 
-static const char *convert_op (OPERATORS op_value)
+static const char *convert_graph_op (OPERATORS op_value)
 {
     if (op_value == OP_ADD)
         return " + ";
@@ -114,14 +115,14 @@ static void Graph_print_node (FILE* graph_file, Tree_node *parent, Tree_node *so
         if (parent)
         {
             if (parent->left == son)
-                fprintf (graph_file, "    node%p [label = \"op: %s L\"]\n", parent, convert_op (parent->op_value));
+                fprintf (graph_file, "    node%p [label = \"op: %s L\"]\n", parent, convert_graph_op (parent->op_value));
             else
-                fprintf (graph_file, "    node%p [label = \"op: %s R\"]\n", parent, convert_op (parent->op_value));
+                fprintf (graph_file, "    node%p [label = \"op: %s R\"]\n", parent, convert_graph_op (parent->op_value));
                 
             if (!isnan (son->num_value))
                 fprintf (graph_file, "    node%p [label = \"num: %lg\"]\n", son, son->num_value);
             else if (son->op_value != OP_NON)
-                fprintf (graph_file, "    node%p [label = \"op: %s\"]\n", son, convert_op (son->op_value));
+                fprintf (graph_file, "    node%p [label = \"op: %s\"]\n", son, convert_graph_op (son->op_value));
             else
                 fprintf (graph_file, "    node%p [label = \"var: %s\"]\n", son, son->var_value);
 
@@ -158,4 +159,16 @@ void Graph_print_tree (Root *tree_root)
     
     system ("dot out\\input.gv -Tpng -o out\\output.png");
   
+}
+
+
+void Free_tree (Tree_node *node)
+{
+    if (node->left)
+        Free_tree (node->left);
+    
+    if (node->right)
+        Free_tree (node->right);
+
+    free (node);
 }

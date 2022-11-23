@@ -21,54 +21,70 @@ bool is_unary (OPERATORS op_value)
 
 const char *convert_tex_op (OPERATORS op_value)
 {
-    if (op_value == OP_ADD)
+    switch (op_value)
+    {
+    case OP_ADD:
         return " + ";
-
-    if (op_value == OP_SUB)
+    case OP_SUB:
         return " - ";
-
-    if (op_value == OP_MUL)
+    case OP_MUL:
         return " \\cdot ";
-    
-    if (op_value == OP_DIV)
+    case OP_DIV:
         return " \\over ";
-
-    if (op_value == OP_SIN)
+    case OP_SIN:
         return "\\sin";
-    
-    if (op_value == OP_COS)
+    case OP_COS:
         return "\\cos";
-    
-    if (op_value == OP_PWR)
+    case OP_PWR:
         return "^";
-    
-    return "non operator";
+    case OP_LN:
+        return "\\ln";
+    case OP_NON:
+        return "non operator";
+    default:
+        break;
+    }
+    return "convert error";
 }
 
 
 const char *convert_op (OPERATORS op_value)
 {
-    if (op_value == OP_ADD)
+    switch (op_value)
+    {
+    case OP_ADD:
         return " + ";
-
-    if (op_value == OP_SUB)
+    case OP_SUB:
         return " - ";
-
-    if (op_value == OP_MUL)
+    case OP_MUL:
         return " * ";
-    
-    if (op_value == OP_DIV)
+    case OP_DIV:
         return " \\ ";
-
-    if (op_value == OP_SIN)
+    case OP_SIN:
         return "sin";
-    
-    if (op_value == OP_COS)
+    case OP_COS:
         return "cos";
-    
-    if (op_value == OP_PWR)
-        return "^";
-    
-    return "non operator";
+    case OP_PWR:
+        return "**";
+    case OP_LN:
+        return "ln";
+    case OP_NON:
+        return "non operator";
+    default:
+        break;
+    }
+
+    return "convert error";
 }
 
+
+
+void *_Safety_calloc (size_t size_of_memory, int line)
+{
+    void *object = calloc (size_of_memory, 1);
+
+    if (!object)
+        printf ("calloc error in line %d\n", line);
+
+    return object;
+}

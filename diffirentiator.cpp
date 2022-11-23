@@ -5,6 +5,7 @@
 #include "utilities.hpp"
 #include "file_analize.hpp"
 #include "diffirentiator.hpp"
+#include "diff_tree.hpp"
 
 extern FILE *tex_file;
 
@@ -187,11 +188,11 @@ static Tree_node *Removal_neutral_elements(Tree_node *node, bool *is_modifed)
         }
         else if (TYPE_IS (right, NUMBER) and OP_IS (OP_ADD) and IS_VAL (right, 0))
         {
-            FREE_AND_MODIFICATE (left, right);
+            FREE_AND_MODIFICATE (right, left);
         }
         else if (TYPE_IS (left, NUMBER) and OP_IS (OP_ADD) and IS_VAL (left, 0))
         {
-            FREE_AND_MODIFICATE (right, left);
+            FREE_AND_MODIFICATE (left, right);
         }
         else if (TYPE_IS (left, NUMBER) and OP_IS (OP_MUL) and IS_VAL (left, 1))
         {
@@ -231,13 +232,13 @@ Tree_node *Copy(Tree_node *node)
 {
     if (node)
     {
-        Tree_node *copy_node = (Tree_node *) calloc (sizeof (Tree_node), 1);
+        Tree_node *copy_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
         copy_node->type = node->type;
 
         if (node->type == VARIABLE)
         {
-            char *temp_var = (char *) calloc (sizeof(char), max_cmd_size);
+            char *temp_var = (char *) Safety_calloc (sizeof(char) * max_cmd_size);
             temp_var = strcpy(temp_var, node->var_value);
             copy_node->var_value = temp_var;
         }
@@ -278,9 +279,12 @@ double Calculate_func (Tree_node *node, double x_value)
             case OP_MUL: return (CALC_L * CALC_R);
             case OP_SUB: return (CALC_L - CALC_R);
             case OP_DIV: return (CALC_L / CALC_R);
+
             case OP_SIN: return sin (CALC_R);
             case OP_COS: return cos (CALC_R);
             case OP_PWR: return pow (CALC_L, CALC_R);
+            case OP_LN:  return log (CALC_R);
+
             case OP_NON: printf ("invalid operator");
             default:
                 break;
@@ -305,4 +309,220 @@ int Factorial (int number)
 }
 
 
+void Taylor_series_calculation (Text *text, Root* tree)
+{
+    Root taylor_tree = {};
+    taylor_tree.first_node = tree->first_node;
 
+    int n_taylor = 1;
+
+    if (sscanf (text->meta_string[taylor_series_str].string_point, "Number of taylor series: %d", &n_taylor) != 1)
+    {
+        printf ("incorrect number of taylor series");
+        
+        printf ("Введите число членов в ряду Тейлора: ");
+        scanf ("%d", &n_taylor);
+    }
+
+    fprintf (tex_file, "\n\\section{Разложение данной функции в ряд Тейлора.}\n\n");
+
+    fprintf (tex_file, "$");
+    Print_tex (tex_file, 0, taylor_tree.first_node);
+    fprintf (tex_file, " = ");
+
+    int index = 0;
+
+    fprintf (tex_file, " %lg", Calculate_func (taylor_tree.first_node, 0));
+    
+    taylor_tree.first_node = Diff (taylor_tree.first_node, false);
+    taylor_tree.first_node = Simpler (taylor_tree.first_node);
+
+    for (index = 1; index < n_taylor + 1; index++)
+    {
+        double value = Calculate_func (taylor_tree.first_node, 0);
+
+        if (!is_equal (value, 0))
+        {
+            if (value < 0)
+                fprintf (tex_file, " - \\frac{%lg}{%d}", -value, Factorial (index));
+            else
+                fprintf (tex_file, " + \\frac{%lg}{%d}", value, Factorial (index));
+            fprintf (tex_file, "\\cdot x^%d", index);
+        }
+        taylor_tree.first_node = Diff (taylor_tree.first_node, false); 
+        taylor_tree.first_node = Simpler (taylor_tree.first_node);
+    }
+
+    fprintf (tex_file, " + o(x^%d) $", n_taylor);
+
+}
+
+
+void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
+{
+    Root first_diff_tree = {};
+    double tangent_point = 0;
+
+    double x_min = -5,
+           x_max = 5,
+           y_min = -5,
+           y_max = 5;
+
+    FILE *graph_file = fopen (graph_file_name, "wb");
+
+    if (!graph_file)
+        printf ("graph file open error");
+
+    if (sscanf (text->meta_string[tangent_point_str].string_point, "Tangent point: %lg", &tangent_point) != 1)
+    {
+        printf ("incorrect tangent point");
+
+        printf ("Введите точку, в которой требуется найти касательную: ");
+        scanf ("%lg", &tangent_point);
+    }
+
+
+    fprintf (tex_file, "\n\\section{Уравнение касательной функции в точке x = %lg.}\n\n", tangent_point);
+
+    first_diff_tree.first_node = Diff (tree->first_node, false);
+    first_diff_tree.first_node = Simpler (first_diff_tree.first_node);
+
+    double f_x = Calculate_func (tree->first_node, tangent_point);
+    double df_x = Calculate_func (first_diff_tree.first_node, tangent_point);
+
+    fprintf (tex_file, "g(x) = $%lg \\cdot x + %lg $", df_x, f_x - df_x * tangent_point);
+
+    fprintf (tex_file, "\n\\section{График функции и касательной к ней.}\n\n");
+
+
+    if (sscanf (text->meta_string[graph_range_str].string_point, "Graph range: (%lg,    %lg),  (%lg,    %lg)", 
+                                                                                &x_min, &x_max, &y_min, &y_max) != 4)
+    {
+        printf ("incorrect graph range");
+
+        printf ("Введите границы построения графика в формате (x_min, x_max), (y_min, y_max):\n");
+        scanf (" (%lg, %lg), (%lg, %lg)", &x_min, &x_max, &y_min, &y_max);
+    }
+
+
+    fprintf (tex_file,  "\n\\begin{figure}[ht]\n"
+                        "\\center\n"
+                        "\\includegraphics[scale=0.65]{graph.png}\n"
+                        "\\end{figure}\n");
+    
+    fprintf (graph_file,    "set terminal png size 800, 600\n"
+                            "set output \"out/graph.png\"\n"
+
+                            "set xlabel \"X\"\n"
+                            "set ylabel \"Y\"\n"
+                            "set grid\n"
+                            "set yrange [%lg:%lg]\n"
+                            "set xrange[%lg:%lg]\n"
+                            "plot ", y_min, y_max, x_min, x_max);
+
+    save_node (graph_file, tree->first_node, NULL);
+    
+    fprintf (graph_file, ", %lg * (x - %lg) + %lg", df_x, tangent_point, f_x);
+    
+
+    fclose (graph_file);
+
+    char *command = (char *) Safety_calloc (sizeof ("gnuplot ") + sizeof (graph_file_name));
+    sprintf (command, "gnuplot %s", graph_file_name);
+    system (command);
+
+}
+
+
+void Calculate_function_in_point (Text *text, Root *tree)
+{
+    
+    double f_x_value = 0;
+
+    if (sscanf (text->meta_string[func_calc_str].string_point, "Function calculation point: %lg", &f_x_value) != 1)
+    {
+        printf ("incorrect point format\n");
+
+        printf ("Введите точку, в которой требуется вычислить значение функции: ");
+        scanf ("%lg", &f_x_value);
+    }
+
+    fprintf (tex_file, "\n\\section{Вычисление значения функции в точке.}\n\n");
+
+    fprintf (tex_file, "$ f(%lg) = %lg $", f_x_value, Calculate_func (tree->first_node, f_x_value));
+}
+
+
+void Calculate_derivative_in_point (Text *text, Root *diff_tree)
+{
+    double df_x_value = 0;
+
+    if (sscanf (text->meta_string[derivative_calc_str].string_point, "Derivative calculation point: %lg", &df_x_value) != 1)
+    {
+        printf ("incorrect point format\n");
+
+        printf ("Введите точку, в которой требуется вычислить значение производной: ");
+        scanf ("%lg", &df_x_value);
+    }
+
+    fprintf (tex_file, "\n\\section{Вычисление производной функции в точке.}\n\n");
+    
+    fprintf (tex_file, "$ f^{'}(%lg) = %lg $", df_x_value, Calculate_func (diff_tree->first_node, df_x_value));
+}
+
+
+void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
+{
+    int derivative_n = 0;
+    Root next_diff_tree = {};
+
+    diff_tree->first_node = tree->first_node;
+    next_diff_tree.first_node = Copy (diff_tree->first_node);
+
+    if (sscanf (text->meta_string[derivative_n_str].string_point, "Derivative power: %d", &derivative_n) != 1)
+    {
+        printf ("incorrect derivative power\n");
+
+        printf ("Введите степень производной: ");
+        scanf ("%d", &derivative_n);
+    }
+
+    int t_derivative_n = derivative_n;
+
+    fprintf (tex_file, "\n\\section{Взятие %d-ой производной.}\n\n", derivative_n);
+    
+    fprintf (tex_file, "$ f(x) = ");
+    Print_tex (tex_file, 0, tree->first_node);
+    fprintf (tex_file, "$\n\n");
+
+    bool show_steps = true;
+
+    if (derivative_n > 2)
+        show_steps = false;
+    
+    while (derivative_n--)
+    {
+        diff_tree->first_node = Simpler (diff_tree->first_node);
+        next_diff_tree.first_node = Diff (diff_tree->first_node, show_steps);
+        diff_tree->first_node = Copy (next_diff_tree.first_node);
+        Free_tree (next_diff_tree.first_node);
+    }
+
+    fprintf (tex_file, "Получаем:\n\n");
+    fprintf (tex_file, "$ f^{(%d)}(x) = ", t_derivative_n);
+    Print_tex (tex_file, 0, diff_tree->first_node);
+    fprintf (tex_file, "$\n");
+
+    fprintf (tex_file, "\n\\section{Упрощение.}\n\n");
+
+    Graph_print_tree (diff_tree);
+    fprintf (tex_file, "$");
+    Print_tex (tex_file, 0, diff_tree->first_node);
+    fprintf (tex_file, " = ");
+
+    diff_tree->first_node = Simpler (diff_tree->first_node);
+    Print_tex (tex_file, 0, diff_tree->first_node);
+    fprintf (tex_file, "$");
+
+}
+    

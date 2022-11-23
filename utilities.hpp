@@ -4,6 +4,9 @@
 #include <math.h>
 #include "diff_tree.hpp"
 
+#define Safety_calloc(size_of_memory) _Safety_calloc (size_of_memory, __LINE__)
+
+void *_Safety_calloc (size_t size_of_memory, int line);
 bool is_unary (OPERATORS op_value);
 bool is_equal (double number_1, double number_2);
 
