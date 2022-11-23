@@ -1,0 +1,7 @@
+(((sin (x)) ^ (5)) + (cos (x)))
+Derivative power:              2
+Function calculation point:    10
+Derivative calculation point:  5
+Number of taylor series:       7
+Tangent point:                 2
+Graph range:                   (-10, 10), (-5, 5)    #(x_min, x_max), (y_min, y_max)
