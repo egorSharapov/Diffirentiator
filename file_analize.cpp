@@ -164,6 +164,11 @@ void save_node (FILE* output_file, Tree_node* node, Tree_node *parent)
 
 void read_t_file (Text *text, const char *t_file_name, Root *tree_root)
 {
+    assert (text);
+    assert (t_file_name);
+    assert (tree_root);
+
+    Constants constants = {};
 
     count_and_read (t_file_name, text);
     create_pointers (text);
@@ -175,6 +180,25 @@ void read_t_file (Text *text, const char *t_file_name, Root *tree_root)
 
     else
         printf ("syntax error");
+    
+    char var = ' ';
+    size_t constants_str = 9;
+    double var_value = 0;
+
+    constants.constants_list = (Constant *) calloc (text->count_of_strings - constants_str, sizeof (Constant));
+    constants.capacity = text->count_of_strings - constants_str;
+
+    // while (text->count_of_strings != constants_str)
+    // {
+    //     if (sscanf (text->meta_string[constants_str].string_point, "%c = %lg", &var, &var_value) != 2)
+    //         printf ("incorrect input\n");
+
+    //     constants.constants_list[text->count_of_strings - constants_str].var_name = var;
+    //     constants.constants_list[text->count_of_strings - constants_str].var_value = var_value;
+
+    //     constants_str++;
+    // }
+    
 
 }
 
@@ -194,12 +218,11 @@ Tree_node *read_leather (const char** source)
     }
     else if (sscanf (*source, " (%1s)", symbol))
     {
-        if (strcmp (symbol, "x") == 0)
-        {
-            *source = strchr (*source, ')') + 1;
-            return New_var (symbol);
-        }
-        return read_node (source);
+        if (strcmp (symbol, "c") == 0 or strcmp (symbol, "s") == 0 or strcmp (symbol, "l") == 0 or strcmp (symbol, "(") == 0)
+            return read_node (source);
+
+        *source = strchr (*source, ')') + 1;
+        return New_var (symbol);
     }
 
     return NULL;
@@ -256,6 +279,8 @@ char * create_dir_name (const char *file_path, const char *file_name)
 
 static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node *parent)
 {
+    assert (output_file);
+
     if (node)
     {
         if (parent and is_unary (parent->op_value))
@@ -304,6 +329,7 @@ static void Tex_node (FILE* output_file, const Tree_node* node, const Tree_node 
 
 void Print_tex (FILE *tex_file, bool is_diff, const Tree_node *node, int diff_power)
 {
+    assert (node);
     assert (tex_file);
 
     if (is_diff)
@@ -321,6 +347,9 @@ void Print_tex (FILE *tex_file, bool is_diff, const Tree_node *node, int diff_po
 
 void Tex_subtree (FILE *tex_file, OPERATORS op_value, const Tree_node *node)
 {
+    assert (tex_file);
+    assert (node);
+
     switch (op_value)
     {
     case OP_ADD:
@@ -415,6 +444,8 @@ void Tex_subtree (FILE *tex_file, OPERATORS op_value, const Tree_node *node)
 
 void Print_tex_keywords (FILE *tex_file)
 {
+    assert (tex_file);
+
     int random_keyword = rand() % keywords_number;
 
     fprintf (tex_file, "%s\n\n", keywords[random_keyword]);
@@ -423,6 +454,8 @@ void Print_tex_keywords (FILE *tex_file)
 
 void Print_tex_title (FILE *tex_file)
 {
+    assert (tex_file);
+    
     fprintf (tex_file,  "\\documentclass{article}\n"
                         "\\usepackage[utf8]{inputenc}\n"
                         "\\usepackage[T2A]{fontenc}\n"

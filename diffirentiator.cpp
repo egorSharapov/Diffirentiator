@@ -29,7 +29,7 @@ extern FILE *tex_file;
     if (is_dump_to_tex) \
     fprintf(tex_file, "%d$\n\n", value)
 
-Tree_node *Diff(const Tree_node *node, bool is_dump_to_tex)
+Tree_node *Diff(const Tree_node *node, bool is_dump_to_tex, const char diff_var)
 {
     assert (node);
 
@@ -50,7 +50,13 @@ Tree_node *Diff(const Tree_node *node, bool is_dump_to_tex)
     }
     case VARIABLE:
     {
-        TEX_NUM(1);
+        if (*node->var_value != diff_var)
+        {
+            TEX_NUM(0);
+            return New_num(0);
+        }
+
+        TEX_NUM (1);
         return New_num(1);
     }
     case OPERATOR:
@@ -123,7 +129,7 @@ Tree_node *Constant_simplification(Tree_node *node, bool *is_modifed)
     assert (node);
     assert (is_modifed);
 
-    if (node->type == OPERATOR and node->op_value != OP_SIN and node->op_value != OP_COS)
+    if (node->type == OPERATOR and !is_unary (node->op_value))
     {
         node->left =  Constant_simplification (node->left, is_modifed);
         node->right = Constant_simplification (node->right, is_modifed);
@@ -173,7 +179,7 @@ static Tree_node *Removal_neutral_elements(Tree_node *node, bool *is_modifed)
     assert (node);
     assert (is_modifed);
 
-    if (node->type == OPERATOR and node->op_value != OP_SIN and node->op_value != OP_COS)
+    if (node->type == OPERATOR and !is_unary (node->op_value))
     {
         node->left =  Removal_neutral_elements(node->left, is_modifed);
         node->right = Removal_neutral_elements(node->right, is_modifed);
@@ -311,6 +317,9 @@ int Factorial (int number)
 
 void Taylor_series_calculation (Text *text, Root* tree)
 {
+    assert (text);
+    assert (tree);
+
     Root taylor_tree = {};
     taylor_tree.first_node = tree->first_node;
 
@@ -333,7 +342,7 @@ void Taylor_series_calculation (Text *text, Root* tree)
     int index = 0;
 
     fprintf (tex_file, " %lg", Calculate_func (taylor_tree.first_node, 0));
-    
+
     taylor_tree.first_node = Diff (taylor_tree.first_node, false);
     taylor_tree.first_node = Simpler (taylor_tree.first_node);
 
@@ -360,6 +369,10 @@ void Taylor_series_calculation (Text *text, Root* tree)
 
 void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
 {
+    assert (text);
+    assert (tree);
+    assert (graph_file_name);
+
     Root first_diff_tree = {};
     double tangent_point = 0;
 
@@ -436,7 +449,9 @@ void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
 
 void Calculate_function_in_point (Text *text, Root *tree)
 {
-    
+    assert (text);
+    assert (tree);
+
     double f_x_value = 0;
 
     if (sscanf (text->meta_string[func_calc_str].string_point, "Function calculation point: %lg", &f_x_value) != 1)
@@ -455,6 +470,9 @@ void Calculate_function_in_point (Text *text, Root *tree)
 
 void Calculate_derivative_in_point (Text *text, Root *diff_tree)
 {
+    assert (text);
+    assert (diff_tree);
+
     double df_x_value = 0;
 
     if (sscanf (text->meta_string[derivative_calc_str].string_point, "Derivative calculation point: %lg", &df_x_value) != 1)
@@ -473,6 +491,9 @@ void Calculate_derivative_in_point (Text *text, Root *diff_tree)
 
 void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
 {
+    assert (text);
+    assert (diff_tree);
+    
     int derivative_n = 0;
     Root next_diff_tree = {};
 
@@ -494,6 +515,8 @@ void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
     fprintf (tex_file, "$ f(x) = ");
     Print_tex (tex_file, 0, tree->first_node);
     fprintf (tex_file, "$\n\n");
+
+    Graph_print_tree (tree);
 
     bool show_steps = true;
 

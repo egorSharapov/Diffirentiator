@@ -14,7 +14,7 @@ bool is_equal (double number_1, double number_2)
 
 bool is_unary (OPERATORS op_value)
 {
-    return (op_value == OP_SIN or op_value == OP_COS);
+    return (op_value == OP_SIN or op_value == OP_COS or op_value == OP_LN);
 }
 
 
@@ -67,7 +67,7 @@ const char *convert_op (OPERATORS op_value)
     case OP_PWR:
         return "**";
     case OP_LN:
-        return "ln";
+        return "log";
     case OP_NON:
         return "non operator";
     default:

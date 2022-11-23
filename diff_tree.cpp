@@ -24,6 +24,8 @@ Tree_node *New_num (double number)
 
 Tree_node *New_var (const char* variable)
 {
+    assert (variable);
+
     Tree_node *new_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
     new_node->type = VARIABLE;
@@ -39,6 +41,8 @@ Tree_node *New_var (const char* variable)
 
 static OPERATORS Find_operator (const char *op_value)
 {
+    assert (op_value);
+
     if (strcmp (op_value, "+") == 0)
         return OP_ADD;
     if (strcmp (op_value, "-") == 0)
@@ -61,6 +65,8 @@ static OPERATORS Find_operator (const char *op_value)
 
 Tree_node *New_operator (const char* op_value, Tree_node *left_son, Tree_node *right_son)
 {
+    assert (op_value);
+    
     Tree_node *new_node = (Tree_node *) Safety_calloc (sizeof (Tree_node));
 
     new_node->type = OPERATOR;
@@ -107,7 +113,6 @@ static const char *convert_graph_op (OPERATORS op_value)
 
 static void Graph_print_node (FILE* graph_file, Tree_node *parent, Tree_node *son)
 {
-
     assert (graph_file);
 
     if (son)
@@ -164,11 +169,14 @@ void Graph_print_tree (Root *tree_root)
 
 void Free_tree (Tree_node *node)
 {
-    if (node->left)
-        Free_tree (node->left);
-    
-    if (node->right)
-        Free_tree (node->right);
+    if (node)
+    {
+        if (node->left)
+            Free_tree (node->left);
+        
+        if (node->right)
+            Free_tree (node->right);
 
-    free (node);
+        free (node);
+    }
 }
