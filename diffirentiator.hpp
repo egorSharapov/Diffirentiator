@@ -15,19 +15,20 @@ enum NUMBER_CMD_STRING
 };
 
 
-Tree_node *Diff    (const Tree_node *node, bool is_dump_to_tex);
+Tree_node *Diff    (const Tree_node *node, bool is_dump_to_tex, const char diff_var = 'x');
 Tree_node *Copy    (Tree_node *node);
 Tree_node *Simpler (Tree_node *node);
 
 Tree_node *Constant_simplification (Tree_node *node, bool *is_modifed);
 
-void Graph_plotter                 (Text *text, Root *tree, const char *graph_file_name);
+void Graph_plotter                 (Text *text, Root *tree, const char *graph_file_name, Constants *);
 void Taking_nth_derivative         (Text *text, Root *tree, Root *diff_tree);
-void Taylor_series_calculation     (Text *text, Root* tree);
-void Calculate_function_in_point   (Text *text, Root *tree);
-void Calculate_derivative_in_point (Text *text, Root *diff_tree);
+void Taylor_series_calculation     (Text *text, Root* tree, Constants *);
+void Calculate_function_in_point   (Text *text, Root *tree, Constants *);
+void Calculate_derivative_in_point (Text *text, Root *diff_tree, Constants *);
+void Calculate_full_derivative     (Root *tree, Constants *f_constants);
 
 int    Factorial      (int number);
-double Calculate_func (Tree_node *node, double x_value);
-
+double Calculate_func (Tree_node *node, double x_value, Constants *f_constants);
+double Find_const_by_name (const char var_name, Constants *f_constants);
 #endif

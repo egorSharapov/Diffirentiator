@@ -9,8 +9,8 @@
 
 extern FILE *tex_file;
 
-#define dL Diff(node->left, is_dump_to_tex)
-#define dR Diff(node->right, is_dump_to_tex)
+#define dL Diff(node->left, is_dump_to_tex, diff_var)
+#define dR Diff(node->right, is_dump_to_tex, diff_var)
 #define cL Copy(node->left)
 #define cR Copy(node->right)
 #define Add(L, R) New_operator("+", L, R)
@@ -52,6 +52,7 @@ Tree_node *Diff(const Tree_node *node, bool is_dump_to_tex, const char diff_var)
     {
         if (*node->var_value != diff_var)
         {
+            printf ("\n\n\nsda;kvlj = %c\n\n\n", diff_var);
             TEX_NUM(0);
             return New_num(0);
         }
@@ -208,6 +209,10 @@ static Tree_node *Removal_neutral_elements(Tree_node *node, bool *is_modifed)
         {
             FREE_AND_MODIFICATE (right, left);
         }
+        else if (TYPE_IS (left, NUMBER) and OP_IS (OP_DIV) and IS_VAL (left, 0))
+        {
+            FREE_AND_MODIFICATE (right, left);
+        }
         else if (TYPE_IS (right, NUMBER) and OP_IS (OP_MUL) and !(TYPE_IS (left, NUMBER)))
         {
             Tree_node *temp = node->left;
@@ -264,10 +269,10 @@ Tree_node *Copy(Tree_node *node)
 }
 
 
-#define CALC_L Calculate_func (node->left, x_value)
-#define CALC_R Calculate_func (node->right, x_value)
+#define CALC_L Calculate_func (node->left, x_value, f_constants)
+#define CALC_R Calculate_func (node->right, x_value, f_constants)
 
-double Calculate_func (Tree_node *node, double x_value)
+double Calculate_func (Tree_node *node, double x_value, Constants *f_constants)
 {
     assert (node);
 
@@ -276,7 +281,13 @@ double Calculate_func (Tree_node *node, double x_value)
     case NUMBER:
         return node->num_value;
     case VARIABLE:
-        return x_value;
+    {
+        if (*node->var_value == 'x')
+            return x_value;
+        else 
+            return Find_const_by_name (*node->var_value, f_constants);
+    }
+        
     case OPERATOR:
     {
         switch (node->op_value)
@@ -315,7 +326,7 @@ int Factorial (int number)
 }
 
 
-void Taylor_series_calculation (Text *text, Root* tree)
+void Taylor_series_calculation (Text *text, Root* tree, Constants *f_constants)
 {
     assert (text);
     assert (tree);
@@ -341,14 +352,14 @@ void Taylor_series_calculation (Text *text, Root* tree)
 
     int index = 0;
 
-    fprintf (tex_file, " %lg", Calculate_func (taylor_tree.first_node, 0));
+    fprintf (tex_file, " %lg", Calculate_func (taylor_tree.first_node, 0, f_constants));
 
     taylor_tree.first_node = Diff (taylor_tree.first_node, false);
     taylor_tree.first_node = Simpler (taylor_tree.first_node);
 
     for (index = 1; index < n_taylor + 1; index++)
     {
-        double value = Calculate_func (taylor_tree.first_node, 0);
+        double value = Calculate_func (taylor_tree.first_node, 0, f_constants);
 
         if (!is_equal (value, 0))
         {
@@ -367,7 +378,7 @@ void Taylor_series_calculation (Text *text, Root* tree)
 }
 
 
-void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
+void Graph_plotter (Text *text, Root *tree, const char *graph_file_name, Constants *f_constants)
 {
     assert (text);
     assert (tree);
@@ -400,8 +411,8 @@ void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
     first_diff_tree.first_node = Diff (tree->first_node, false);
     first_diff_tree.first_node = Simpler (first_diff_tree.first_node);
 
-    double f_x = Calculate_func (tree->first_node, tangent_point);
-    double df_x = Calculate_func (first_diff_tree.first_node, tangent_point);
+    double f_x = Calculate_func (tree->first_node, tangent_point, f_constants);
+    double df_x = Calculate_func (first_diff_tree.first_node, tangent_point, f_constants);
 
     fprintf (tex_file, "g(x) = $%lg \\cdot x + %lg $", df_x, f_x - df_x * tangent_point);
 
@@ -433,7 +444,7 @@ void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
                             "set xrange[%lg:%lg]\n"
                             "plot ", y_min, y_max, x_min, x_max);
 
-    save_node (graph_file, tree->first_node, NULL);
+    save_node (graph_file, tree->first_node, NULL, f_constants);
     
     fprintf (graph_file, ", %lg * (x - %lg) + %lg", df_x, tangent_point, f_x);
     
@@ -447,7 +458,7 @@ void Graph_plotter (Text *text, Root *tree, const char *graph_file_name)
 }
 
 
-void Calculate_function_in_point (Text *text, Root *tree)
+void Calculate_function_in_point (Text *text, Root *tree, Constants *f_constants)
 {
     assert (text);
     assert (tree);
@@ -464,11 +475,11 @@ void Calculate_function_in_point (Text *text, Root *tree)
 
     fprintf (tex_file, "\n\\section{Вычисление значения функции в точке.}\n\n");
 
-    fprintf (tex_file, "$ f(%lg) = %lg $", f_x_value, Calculate_func (tree->first_node, f_x_value));
+    fprintf (tex_file, "$ f(%lg) = %lg $", f_x_value, Calculate_func (tree->first_node, f_x_value, f_constants));
 }
 
 
-void Calculate_derivative_in_point (Text *text, Root *diff_tree)
+void Calculate_derivative_in_point (Text *text, Root *diff_tree, Constants *f_constants)
 {
     assert (text);
     assert (diff_tree);
@@ -484,8 +495,10 @@ void Calculate_derivative_in_point (Text *text, Root *diff_tree)
     }
 
     fprintf (tex_file, "\n\\section{Вычисление производной функции в точке.}\n\n");
-    
-    fprintf (tex_file, "$ f^{'}(%lg) = %lg $", df_x_value, Calculate_func (diff_tree->first_node, df_x_value));
+
+    double f_x_value = Calculate_func (diff_tree->first_node, df_x_value, f_constants);
+
+    fprintf (tex_file, "$ f^{'}(%lg) = %lg $", df_x_value, f_x_value);
 }
 
 
@@ -493,7 +506,7 @@ void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
 {
     assert (text);
     assert (diff_tree);
-    
+
     int derivative_n = 0;
     Root next_diff_tree = {};
 
@@ -510,7 +523,7 @@ void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
 
     int t_derivative_n = derivative_n;
 
-    fprintf (tex_file, "\n\\section{Взятие %d-ой производной.}\n\n", derivative_n);
+    fprintf (tex_file, "\n\\section{Взятие %d-ой производной по x.}\n\n", derivative_n);
     
     fprintf (tex_file, "$ f(x) = ");
     Print_tex (tex_file, 0, tree->first_node);
@@ -548,4 +561,55 @@ void Taking_nth_derivative (Text *text, Root *tree, Root *diff_tree)
     fprintf (tex_file, "$");
 
 }
-    
+
+
+
+double Find_const_by_name (const char var_name, Constants *f_constants)
+{
+    for (size_t index = 0; index < f_constants->capacity; index++)
+    {
+        if (var_name == f_constants->list[index].var_name)
+            return f_constants->list[index].var_value;
+    }
+    return 0;
+}
+
+
+void Calculate_full_derivative (Root *tree, Constants *f_constants)
+{
+
+    Root temp_diff_tree = {};
+
+    fprintf (tex_file, "\n\\section{Взятие полной производной}\n\n");
+
+    fprintf (tex_file, "F(x");
+
+
+    for (size_t index = 0; index < f_constants->capacity; index++)
+    {
+        char var_name = f_constants->list[index].var_name;
+        fprintf (tex_file, ", %c", var_name);
+    }
+    fprintf (tex_file, ") = $ \\sqrt{");
+
+    temp_diff_tree.first_node = Diff (tree->first_node, 0, 'x');
+    temp_diff_tree.first_node = Simpler (temp_diff_tree.first_node);
+
+    fprintf (tex_file, "(");
+    Print_tex (tex_file, 0, temp_diff_tree.first_node);
+    fprintf (tex_file, " \\cdot \\Delta x)^2");
+
+    for (size_t index = 0; index < f_constants->capacity; index++)
+    {
+        char var_name = f_constants->list[index].var_name;
+        temp_diff_tree.first_node = Diff (tree->first_node, 0, var_name);
+        temp_diff_tree.first_node = Simpler (temp_diff_tree.first_node);
+
+        fprintf (tex_file, " + (");
+        Print_tex (tex_file, 0, temp_diff_tree.first_node);
+        fprintf (tex_file, " \\cdot \\Delta %c)^2", var_name);
+
+    }
+    fprintf (tex_file, "} $\n");
+
+}

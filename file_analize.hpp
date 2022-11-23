@@ -38,13 +38,14 @@ enum ERRORS_CODE
 void      create_pointers    (Text * text);
 void      counting_strings   (Text * text);
 void      save_tree          (const char* file_name, Root* tree_root);
-void      save_node          (FILE* output_file, Tree_node* node, Tree_node *parent);
+void      save_node          (FILE* output_file, Tree_node* node, Tree_node *parent, Constants *f_constants);
 char      *create_dir_name   (const char *file_path, const char *file_name);
-void      read_t_file        (Text *text, const char *t_file_name, Root *tree_root);
+void      read_t_file        (Text *text, const char *t_file_name, Root *tree_root, Constants *constants);
 void      Tex_subtree        (FILE *tex_file, OPERATORS op_value, const Tree_node *node);
 void      Print_tex          (FILE *tex_file, bool is_diff, const Tree_node *node, int diff_power = 1);
 void      Print_tex_keywords (FILE *tex_file);
-void      Print_tex_title    (FILE *tex_file);
+void      Print_tex_title    (FILE *tex_file, Root *tree_root, Constants *f_constants);
+void      Print_tex_end      (FILE *tex_file);
 Tree_node *read_node         (const char **source);
 Tree_node *read_leather      (const char **source);
 
