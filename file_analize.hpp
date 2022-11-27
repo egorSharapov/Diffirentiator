@@ -6,7 +6,7 @@
 
 
 const int max_cmd_size    = 128;
-const int keywords_number = 4;
+const int keywords_number = 8;
 
 typedef struct
 {

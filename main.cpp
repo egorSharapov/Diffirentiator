@@ -1,5 +1,5 @@
 #include "file_analize.hpp"
-#include "diffirentiator.hpp"
+#include "diff_tex.hpp"
 #include "windows.h"
 #include "utilities.hpp"
 
@@ -18,19 +18,18 @@ int main ()
     Root diff_tree = {};
     Constants func_constants = {};
 
-
     tex_file = fopen (tex_file_name, "wb");
     if (!tex_file)  
         printf ("tex open error");
     
     read_t_file (&text, "out\\tree_input.txt", &tree, &func_constants);
-    //save_tree ("out\\tree_output.txt", &tree);
     printf ("succes read file\n");
 
     Print_tex_title (tex_file, &tree, &func_constants);
 
     //вычисление n-ной производной функции
     Taking_nth_derivative (&text, &tree, &diff_tree);
+    
     //вычисление функции в точке
     Calculate_function_in_point (&text, &tree, &func_constants);
 
@@ -40,11 +39,11 @@ int main ()
     //вычисление ряда тейлора 
     Taylor_series_calculation (&text, &tree, &func_constants);
 
-    //построение графика 
-    Graph_plotter (&text, &tree, graph_file_name, &func_constants);
-
     //взятие полной производной
     Calculate_full_derivative (&tree, &func_constants);
+
+    //построение графика 
+    Graph_plotter (&text, &tree, graph_file_name, &func_constants);
 
     Print_tex_end (tex_file);
 
